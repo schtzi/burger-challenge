@@ -1,0 +1,30 @@
+{
+  "size_multipliers": {
+    "small": 0.7,
+    "medium": 1.0,
+    "big": 1.3
+  },
+  "burgers": {
+    "hamburger": 5.0,
+    "cheeseburger": 6.0,
+    "chillicheeseburger": 8.0
+  },
+  "ingredients": {
+    "salad": 1.0,
+    "tomatoes": 2.0,
+    "bacon": 2.5
+  },
+  "promotions": {
+    "TWOSMALLHAMBURGERSSFORONE": {
+      "target": "hamburger",
+      "target_size": "small",
+      "from": 2,
+      "to": 1
+    }
+  },
+  "discounts": {
+    "5PERCENTONALL": {
+      "deduction_in_percent": 5
+    }
+  }
+}

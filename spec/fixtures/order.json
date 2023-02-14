@@ -1,0 +1,36 @@
+{
+  "items": [
+    {
+      "name": "hamburger",
+      "size": "medium",
+      "add": ["Onions"],
+      "remove": ["salad"]
+    },
+    {
+      "name": "hamburger",
+      "size": "small",
+      "add": [],
+      "remove": []
+    },
+    {
+      "name": "hamburger",
+      "size": "small",
+      "add": [],
+      "remove": []
+    },
+    {
+      "name": "hamburger",
+      "size": "small",
+      "add": [],
+      "remove": []
+    },
+    {
+      "name": "hamburger",
+      "size": "small",
+      "add": ["tomatoes"],
+      "remove": []
+    }
+  ],
+  "promotion_codes": ["TWOSMALLHAMBURGERSSFORONE"],
+  "discount_code": "5PERCENTONALL"
+}

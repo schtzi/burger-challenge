@@ -1,0 +1,2 @@
+module BurgerOrder
+end
