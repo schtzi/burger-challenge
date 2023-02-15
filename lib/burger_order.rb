@@ -1,64 +1,98 @@
 require 'json'
 require 'pry-byebug'
 
-
 module BurgerOrder
+  class Data
+    attr_reader :burgers, :size_multipliers, :ingredients, :promotions, :discounts
+
+    def initialize
+      content = JSON.parse(File.read('lib/data.json'))
+
+      @size_multipliers = content['size_multipliers']
+      @burgers = content['burgers']
+      @ingredients = content['ingredients']
+      @promotions = content['promotions']
+      @discounts = content['discounts']
+    end
+  end
+
+  class Order
+    attr_reader :content, :promotions, :discount
+
+    def initialize(order_file)
+      order_data = JSON.parse(order_file)
+      @content = []
+
+      order_data['items'].each do |item|
+        @content << Burger.new(name: item['name'], size: item['size'], add: item['add'], remove: item['remove'])
+      end
+
+      @promotions = order_data['promotion_codes']
+      @discount = order_data['discount_code']
+    end
+
+    def total_value
+      @content.sum(&:extras_price) + @content.sum(&:burger_price)
+    end
+  end
+
+  class Burger
+    attr_accessor :name, :size, :add, :remove, :burger_price, :extras_price
+
+    def initialize(attributes)
+      @name = attributes[:name]
+      @size = attributes[:size]
+      @add = attributes[:add]
+      @remove = attributes[:remove]
+
+      add_prices
+    end
+
+    def add_prices
+      @data = Data.new
+
+      @burger_price = @data.burgers[@name] * @data.size_multipliers[@size]
+      @extras_price = 0
+
+      return unless @add.any?
+
+      @add.each do |extra|
+        next if @data.ingredients[extra].nil?
+
+        @extras_price += @data.ingredients[extra] * @data.size_multipliers[@size]
+      end
+    end
+
+    def self.all
+      ObjectSpace.each_object(self).to_a
+    end
+
+    def self.count
+      all.count
+    end
+  end
+
   def self.calculate_total_price(order_file)
-    order = JSON.parse(order_file)
-    data = JSON.parse(File.read('lib/data.json'))
+    data = Data.new
+    order = Order.new(order_file)
+    order.discount.any? ? apply_discount(order, data) : order.total_value
 
-    order['items'] = add_prices(order['items'], data)
-    calculate_price(order, data)
+    # apply_discount = (order.sum(&:extras_price) + price_after_promo(order.content))
   end
 
-  def self.calculate_price(order, data)
-    price = 0
-    order = apply_promotion(order, data)
-    order['items'].each do |burger|
-      price += burger['price']
-      price += burger['extras_price']
+  def self.apply_discount(order, data)
+    discount_data = data.discounts[order.discount]
+    case discount_data
+    when 'deduction_in_percent'
+      order.total_value * (1 - discount_data['deduction_in_percent'] / 100)
+    when 'deduction_in_euro'
+      order.total_value - discount_data['deduction_in_euro']
+    when 'deduction_in_cents'
+      order.total_value - (discount_data['deduction_in_euro'] / 100)
+    else
+      order.total_value
     end
-    apply_discount(price, order, data)
-  end
-
-  def self.apply_discount(price, order, data)
-    deduction = data['discounts'][order['discount_code']]['deduction_in_percent']
-    price * (1 - (deduction / 100.0))
-  end
-
-  def self.apply_promotion(order, data)
-    order['promotion_codes'].each do |order_code|
-      data_code = data['promotions'][order_code]
-      target = data_code['from']
-      counter = 0
-      order['items'].each do |burger|
-        if data_code['target'] == burger['name'] &&
-           data_code['target_size'] == burger['size']
-          counter += 1
-          if counter < target && counter >= data_code['to']
-            burger['price'] = 0
-          end
-          if counter == target
-            counter = 0
-          end
-        end
-      end
-    end
-    order
-  end
-
-  def self.add_prices(items, data)
-    items.each do |item|
-      item['price'] = data['burgers'][item['name']] * data['size_multipliers'][item['size']]
-      item['extras_price'] = 0
-      item['add'].each do |extra|
-        unless data['ingredients'][extra].nil?
-          item['extras_price'] += data['ingredients'][extra] * data['size_multipliers'][item['size']]
-        end
-      end
-    end
-    items
   end
 end
 
-# BurgerOrder.calculate_total_price(File.read('spec/fixtures/order.json'))
+BurgerOrder.calculate_total_price(File.read('spec/fixtures/order.json'))

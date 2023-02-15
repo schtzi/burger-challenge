@@ -1,7 +1,7 @@
 {
   "items": [
     {
-      "name": "hamburger",
+      "name": "cheeseburger",
       "size": "medium",
       "add": ["Onions"],
       "remove": ["salad"]
