@@ -76,7 +76,7 @@ module BurgerOrder
     data = Data.new # needs to be refactored so that it's only done once
 
     order.promotions.nil? ? order.total_value : apply_promotions(order, data)
-    order.discount.empty? ? order.total_value : apply_discount(order, data)
+    p order.discount.empty? ? order.total_value : apply_discount(order, data)
 
   end
 
