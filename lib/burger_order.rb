@@ -27,7 +27,7 @@ module BurgerOrder
     attr_accessor :total_value
 
     def initialize(order_file)
-      order_data = JSON.parse(order_file)
+      order_data = JSON.parse(File.read(order_file))
       @content = []
 
       order_data['items'].each do |item|
@@ -71,12 +71,12 @@ module BurgerOrder
     end
   end
 
-  def self.calculate_total_price(order_file)
-    order = Order.new(order_file)
+  def self.calculate_total_price(order_file_path)
+    order = Order.new(order_file_path)
     data = Data.new # needs to be refactored so that it's only done once
 
     order.promotions.nil? ? order.total_value : apply_promotions(order, data)
-    p order.discount.empty? ? order.total_value : apply_discount(order, data)
+    order.discount.empty? ? order.total_value : apply_discount(order, data)
 
   end
 
@@ -109,4 +109,4 @@ module BurgerOrder
   end
 end
 
-BurgerOrder.calculate_total_price(File.read('spec/fixtures/order.json'))
+BurgerOrder.calculate_total_price('spec/fixtures/order.json')
