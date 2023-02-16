@@ -1,0 +1,30 @@
+{
+  "items": [
+    {
+      "name": "hamburger",
+      "size": "small",
+      "add": [],
+      "remove": []
+    },
+    {
+      "name": "hamburger",
+      "size": "small",
+      "add": [],
+      "remove": []
+    },
+    {
+      "name": "hamburger",
+      "size": "small",
+      "add": [],
+      "remove": []
+    },
+    {
+      "name": "hamburger",
+      "size": "small",
+      "add": [],
+      "remove": []
+    }
+  ],
+  "promotion_codes": [],
+  "discount_code": ""
+}

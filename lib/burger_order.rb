@@ -1,64 +1,112 @@
 require 'json'
 require 'pry-byebug'
 
-
 module BurgerOrder
-  def self.calculate_total_price(order_file)
-    order = JSON.parse(order_file)
-    data = JSON.parse(File.read('lib/data.json'))
+  # before_action :load_database, only: :calculate_total_price
 
-    order['items'] = add_prices(order['items'], data)
-    calculate_price(order, data)
-  end
+  # def self.load_database
+  #   @@data = Data.new
+  # end
 
-  def self.calculate_price(order, data)
-    price = 0
-    order = apply_promotion(order, data)
-    order['items'].each do |burger|
-      price += burger['price']
-      price += burger['extras_price']
+  class Data
+    attr_reader :burgers, :size_multipliers, :ingredients, :promotions, :discounts
+
+    def initialize
+      content = JSON.parse(File.read('lib/data.json'))
+
+      @size_multipliers = content['size_multipliers']
+      @burgers = content['burgers']
+      @ingredients = content['ingredients']
+      @promotions = content['promotions']
+      @discounts = content['discounts']
     end
-    apply_discount(price, order, data)
   end
 
-  def self.apply_discount(price, order, data)
-    deduction = data['discounts'][order['discount_code']]['deduction_in_percent']
-    price * (1 - (deduction / 100.0))
+  class Order
+    attr_reader :content, :promotions, :discount
+    attr_accessor :total_value
+
+    def initialize(order_file)
+      order_data = JSON.parse(File.read(order_file))
+      @content = []
+
+      order_data['items'].each do |item|
+        @content << Burger.new(name: item['name'], size: item['size'], add: item['add'], remove: item['remove'])
+      end
+
+      @promotions = order_data['promotion_codes']
+      @discount = order_data['discount_code']
+      @total_value = @content.sum(&:extras_price) + @content.sum(&:burger_price)
+    end
   end
 
-  def self.apply_promotion(order, data)
-    order['promotion_codes'].each do |order_code|
-      data_code = data['promotions'][order_code]
-      target = data_code['from']
-      counter = 0
-      order['items'].each do |burger|
-        if data_code['target'] == burger['name'] &&
-           data_code['target_size'] == burger['size']
-          counter += 1
-          if counter < target && counter >= data_code['to']
-            burger['price'] = 0
-          end
-          if counter == target
-            counter = 0
-          end
-        end
+  class Burger
+    attr_accessor :name, :size, :add, :remove, :burger_price, :extras_price
+
+    def initialize(attributes)
+      @data = Data.new # needs to be refactored so that it's only done once
+      @name = attributes[:name]
+      @size = attributes[:size]
+      @add = attributes[:add]
+      @remove = attributes[:remove]
+
+      add_prices
+    end
+
+    def add_prices
+      @burger_price = @data.burgers[@name] * @data.size_multipliers[@size]
+      @extras_price = 0
+
+      return unless @add.any?
+
+      @add.each do |extra|
+        next if @data.ingredients[extra].nil?
+
+        @extras_price += @data.ingredients[extra] * @data.size_multipliers[@size]
       end
     end
-    order
+
+    def self.all
+      ObjectSpace.each_object(self).to_a
+    end
   end
 
-  def self.add_prices(items, data)
-    items.each do |item|
-      item['price'] = data['burgers'][item['name']] * data['size_multipliers'][item['size']]
-      item['extras_price'] = 0
-      item['add'].each do |extra|
-        unless data['ingredients'][extra].nil?
-          item['extras_price'] += data['ingredients'][extra] * data['size_multipliers'][item['size']]
-        end
-      end
+  def self.calculate_total_price(order_file_path)
+    order = Order.new(order_file_path)
+    data = Data.new # needs to be refactored so that it's only done once
+
+    order.promotions.nil? ? order.total_value : apply_promotions(order, data)
+    order.discount.empty? ? order.total_value : apply_discount(order, data)
+
+  end
+
+  def self.apply_promotions(order, data)
+    order.promotions.each do |promo|
+      promo_data = data.promotions[promo]
+
+      count = Burger.all.count { |b| b.name == promo_data['target'] && b.size == promo_data['target_size'] }
+      relevant_count = count - (count % promo_data['from'])
+      number_of_possible_promotions = relevant_count / promo_data['from']
+      reduction = number_of_possible_promotions / (promo_data['from'] - promo_data['to'])
+
+      order.total_value -= (reduction * data.burgers[promo_data['target']] * data.size_multipliers[promo_data['target_size']])
     end
-    items
+    order.total_value.round(2)
+  end
+
+  def self.apply_discount(order, data)
+    discount_data = data.discounts[order.discount]
+    case discount_data.keys[0]
+    when 'deduction_in_percent'
+      order.total_value = (order.total_value * (1 - (discount_data['deduction_in_percent'] / 100.0))).round(2)
+    when 'deduction_in_euro'
+      order.total_value -= discount_data['deduction_in_euro']
+    when 'deduction_in_cents'
+      order.total_value -= (discount_data['deduction_in_euro'] / 100)
+    else
+      order.total_value
+    end
   end
 end
 
-# BurgerOrder.calculate_total_price(File.read('spec/fixtures/order.json'))
+BurgerOrder.calculate_total_price('spec/fixtures/order.json')

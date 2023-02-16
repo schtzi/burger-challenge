@@ -1,0 +1,24 @@
+{
+  "items": [
+    {
+      "name": "hamburger",
+      "size": "medium",
+      "add": [],
+      "remove": []
+    },
+    {
+      "name": "cheeseburger",
+      "size": "medium",
+      "add": [],
+      "remove": []
+    },
+    {
+      "name": "chillicheeseburger",
+      "size": "medium",
+      "add": [],
+      "remove": []
+    }
+  ],
+  "promotion_codes": [],
+  "discount_code": ""
+}

@@ -20,6 +20,12 @@
       "target_size": "small",
       "from": 2,
       "to": 1
+    },
+    "THREESMALLHAMBURGERSSFORONE": {
+      "target": "hamburger",
+      "target_size": "small",
+      "from": 3,
+      "to": 1
     }
   },
   "discounts": {
