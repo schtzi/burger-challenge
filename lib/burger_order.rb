@@ -44,10 +44,11 @@ module BurgerOrder
       @promotions.each do |promo|
         promo_data = data.promotions[promo]
 
+
         count = @content.count { |b| b.name == promo_data['target'] && b.size == promo_data['target_size'] }
         relevant_count = count - (count % promo_data['from'])
         number_of_possible_promotions = relevant_count / promo_data['from']
-        reduction = number_of_possible_promotions / (promo_data['from'] - promo_data['to'])
+        reduction = number_of_possible_promotions * (promo_data['from'] - promo_data['to'])
 
         @total_value -= (reduction * data.burgers[promo_data['target']] * data.size_multipliers[promo_data['target_size']])
       end
@@ -74,7 +75,6 @@ module BurgerOrder
 
   class Burger
     attr_reader :name, :size, :add, :remove, :burger_price, :extras_price
-
 
     def initialize(attributes)
       @data = Data.new # needs to be refactored so that it's only done once
@@ -110,8 +110,8 @@ module BurgerOrder
     order = Order.new(order_file_path)
     data = Data.new # needs to be refactored so that it's only done once
     order.apply_promotions(data)
-    order.apply_discount(data)
+    p order.apply_discount(data)
   end
 end
 
-BurgerOrder.calculate_total_price('spec/fixtures/order_4.json')
+BurgerOrder.calculate_total_price('spec/fixtures/order_7.json')
