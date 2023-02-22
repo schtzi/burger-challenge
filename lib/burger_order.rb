@@ -23,8 +23,7 @@ module BurgerOrder
   end
 
   class Order
-    attr_reader :content, :promotions, :discount
-    attr_accessor :total_value
+    attr_reader :content, :promotions, :discount, :total_value
 
     def initialize(order_file)
       order_data = JSON.parse(File.read(order_file))
@@ -38,10 +37,44 @@ module BurgerOrder
       @discount = order_data['discount_code']
       @total_value = @content.sum(&:extras_price) + @content.sum(&:burger_price)
     end
+
+    def apply_promotions(data)
+      return @total_value if @promotions.nil?
+
+      @promotions.each do |promo|
+        promo_data = data.promotions[promo]
+
+        count = @content.count { |b| b.name == promo_data['target'] && b.size == promo_data['target_size'] }
+        relevant_count = count - (count % promo_data['from'])
+        number_of_possible_promotions = relevant_count / promo_data['from']
+        reduction = number_of_possible_promotions / (promo_data['from'] - promo_data['to'])
+
+        @total_value -= (reduction * data.burgers[promo_data['target']] * data.size_multipliers[promo_data['target_size']])
+      end
+      @total_value.round(2)
+    end
+
+    def apply_discount(data)
+      return @total_value if @discount.empty?
+
+      discount_data = data.discounts[@discount]
+
+      case discount_data.keys[0]
+      when 'deduction_in_percent'
+        @total_value = (@total_value * (1 - (discount_data['deduction_in_percent'] / 100.0))).round(2)
+      when 'deduction_in_euro'
+        @total_value -= discount_data['deduction_in_euro']
+      when 'deduction_in_cents'
+        @total_value -= (discount_data['deduction_in_euro'] / 100)
+      else
+        @total_value
+      end
+    end
   end
 
   class Burger
-    attr_accessor :name, :size, :add, :remove, :burger_price, :extras_price
+    attr_reader :name, :size, :add, :remove, :burger_price, :extras_price
+
 
     def initialize(attributes)
       @data = Data.new # needs to be refactored so that it's only done once
@@ -52,6 +85,12 @@ module BurgerOrder
 
       add_prices
     end
+
+    def self.all
+      ObjectSpace.each_object(self).to_a
+    end
+
+    private
 
     def add_prices
       @burger_price = @data.burgers[@name] * @data.size_multipliers[@size]
@@ -65,48 +104,14 @@ module BurgerOrder
         @extras_price += @data.ingredients[extra] * @data.size_multipliers[@size]
       end
     end
-
-    def self.all
-      ObjectSpace.each_object(self).to_a
-    end
   end
 
   def self.calculate_total_price(order_file_path)
     order = Order.new(order_file_path)
     data = Data.new # needs to be refactored so that it's only done once
-
-    order.promotions.nil? ? order.total_value : apply_promotions(order, data)
-    order.discount.empty? ? order.total_value : apply_discount(order, data)
-
-  end
-
-  def self.apply_promotions(order, data)
-    order.promotions.each do |promo|
-      promo_data = data.promotions[promo]
-
-      count = Burger.all.count { |b| b.name == promo_data['target'] && b.size == promo_data['target_size'] }
-      relevant_count = count - (count % promo_data['from'])
-      number_of_possible_promotions = relevant_count / promo_data['from']
-      reduction = number_of_possible_promotions / (promo_data['from'] - promo_data['to'])
-
-      order.total_value -= (reduction * data.burgers[promo_data['target']] * data.size_multipliers[promo_data['target_size']])
-    end
-    order.total_value.round(2)
-  end
-
-  def self.apply_discount(order, data)
-    discount_data = data.discounts[order.discount]
-    case discount_data.keys[0]
-    when 'deduction_in_percent'
-      order.total_value = (order.total_value * (1 - (discount_data['deduction_in_percent'] / 100.0))).round(2)
-    when 'deduction_in_euro'
-      order.total_value -= discount_data['deduction_in_euro']
-    when 'deduction_in_cents'
-      order.total_value -= (discount_data['deduction_in_euro'] / 100)
-    else
-      order.total_value
-    end
+    order.apply_promotions(data)
+    order.apply_discount(data)
   end
 end
 
-BurgerOrder.calculate_total_price('spec/fixtures/order.json')
+BurgerOrder.calculate_total_price('spec/fixtures/order_4.json')
